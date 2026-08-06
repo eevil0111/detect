@@ -14,7 +14,6 @@ export default function Home() {
 
   // 아카이브(일자별 조회) 탭 상태
   const [savedReports, setSavedReports] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [archiveError, setArchiveError] = useState("");
@@ -31,7 +30,6 @@ export default function Home() {
       setSavedReports(Array.isArray(data) ? data : []);
       if (Array.isArray(data) && data.length > 0 && !selectedReport) {
         setSelectedReport(data[0]);
-        setSelectedDate(data[0].report_date);
       }
     } catch (err) {
       setArchiveError("DB에서 일자별 보고서 목록을 로드하지 못했습니다.");
@@ -354,7 +352,6 @@ export default function Home() {
                           key={item.report_id}
                           onClick={() => {
                             setSelectedReport(item);
-                            setSelectedDate(item.report_date);
                           }}
                           style={{
                             ...styles.archiveItem,
