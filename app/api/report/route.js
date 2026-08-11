@@ -23,12 +23,29 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   }
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
-    // 1. 원시 불량 데이터 로드
+    // KST 기준 날짜 (YYYY-MM-DD) 또는 쿼리 스트링의 date 파라미터 추출
+    const { searchParams } = new URL(request.url || "http://localhost", "http://localhost");
+    const dateParam = searchParams.get("date");
+
+    const now = new Date();
+    const kstDate = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const defaultDateStr = kstDate.toISOString().split("T")[0];
+    const dateStr = dateParam || defaultDateStr;
+
+    // 해당 날짜의 00:00:00 ~ 23:59:59 범위 설정 (limit 없이 전송)
+    const startDate = `${dateStr}T00:00:00`;
+    const endDate = `${dateStr}T23:59:59`;
+    const queryParams = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    }).toString();
+
+    // 1. 원시 불량 데이터 로드 (해당 날짜 범위로 제한 없이 조회)
     let defectsData = [];
     try {
-      const res = await fetchWithTimeout(`${PRIMARY_FASTAPI_URL}/defects/`, {}, 4000);
+      const res = await fetchWithTimeout(`${PRIMARY_FASTAPI_URL}/defects/?${queryParams}`, {}, 4000);
       if (res.ok) {
         defectsData = await res.json();
       } else {
@@ -36,7 +53,7 @@ export async function GET() {
       }
     } catch {
       try {
-        const localRes = await fetchWithTimeout(`${LOCAL_FASTAPI_URL}/defects/`, {}, 3000);
+        const localRes = await fetchWithTimeout(`${LOCAL_FASTAPI_URL}/defects/?${queryParams}`, {}, 3000);
         if (localRes.ok) {
           defectsData = await localRes.json();
         }
@@ -96,11 +113,6 @@ export async function GET() {
         topDefectClass = cls;
       }
     });
-
-    // KST 기준 오늘 날짜 (YYYY-MM-DD)
-    const now = new Date();
-    const kstDate = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const dateStr = kstDate.toISOString().split("T")[0];
 
     // 3. OpenAI 호출 및 실무 고도화 프롬프트 작성
     const openai = new OpenAI({
